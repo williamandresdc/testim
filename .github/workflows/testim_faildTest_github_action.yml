@@ -61,8 +61,20 @@ jobs:
           fi
           
           echo "Respuesta de la primera solicitud: $RESPONSE"
+          # Establece la respuesta como una salida del paso
+          echo "::set-output name=qtest_response::${RESPONSE}"
           
+      - name: Notificar al webhook
+        env:
+            QTEST_WEBHOOK_DISCORD: ${{ secrets.QTEST_WEBHOOK_DISCORD }}
+        # Este paso depende de la salida del paso anterior
+        run: |
+          # Accede a la salida del paso 'create_defect_step'
+          WEBHOOK_DATA="${{ steps.create_defect_step.outputs.qtest_response }}"
+          
+          echo "Enviando a webhook: $WEBHOOK_DATA"
+
           # Envía el cuerpo de la respuesta anterior como datos a la segunda solicitud
-          curl --location --request POST '$QTEST_WEBHOOK_DISCORD' \
+          curl --location --request POST "$QTEST_WEBHOOK_DISCORD" \
             --header 'Content-Type: application/json' \
-            --data "$RESPONSE"
+            --data "$WEBHOOK_DATA"
