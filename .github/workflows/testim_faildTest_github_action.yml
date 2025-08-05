@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v4
       - run: npm install -g @testim/testim-cli
-      - run: testim --token "onlfP7MDMyaYPkfadfmv8lIbTRTqAdwJrYf4u4Hkyd383N" --project "nKGi7CBJynSVJ3" --grid "Testim-Grid" --suite "FaildTest" --timeout 300000
+      - run: testim --token "onlfP7MDMyaYPkpYBoRjqhmv8lIbTRTqAdwJrYf4u4Hkyd383N" --project "nKGi7CBJylaVVp7nSVJ3" --grid "Testim-Grid" --suite "FaildTest" --timeout 300000
 
   create-qtest-defect:
     # Este job solo se ejecutará después de que "run-testimio-cli" haya terminado.
@@ -62,6 +62,6 @@ jobs:
           )
 
           curl --location --request POST "${{ env.QTEST_URL }}/api/v3/projects/${{ env.QTEST_PROJECT_ID }}/defects" \
-          --header "Authorization: Bearer ${{ env.QTEST_TOKEN }}" \
+          --header "Authorization: ${{ env.QTEST_TOKEN }}" \
           --header 'Content-Type: application/json' \
           --data "${DEFECT_PAYLOAD}"
