@@ -23,22 +23,23 @@ jobs:
         id: create_defect_step
         env:
           QTEST_TOKEN: ${{ secrets.QTEST_TOKEN }}
+          QTEST_WEBHOOK_DISCORD: ${{ secrets.QTEST_WEBHOOK_DISCORD }}
           QTEST_PROJECT_ID: '21672'
           QTEST_SUMMARY_FIELD_ID: '2097336'
           QTEST_DESCRIPTION_FIELD_ID: '2097339'
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_COMMIT_SHA: ${{ github.sha }}
-          
-        run: |  
+        run: |
           QTEST_URL="https://williamdiaz.qtestnet.com/api/v3/projects/${QTEST_PROJECT_ID}/defects"
           SUMMARY="Error en pipeline ${GITHUB_RUN_ID}"
           DESCRIPTION="El commit ${GITHUB_COMMIT_SHA} falló. Revisa: https://github.com/${GITHUB_REPO}/actions/runs/${GITHUB_RUN_ID}"
-      
-          curl --location "$QTEST_URL" \
+
+          # Realiza la primera solicitud y almacena la respuesta completa en una variable
+          RESPONSE=$(curl --silent --location "$QTEST_URL" \
             --header "Authorization: $QTEST_TOKEN" \
             --header "Content-Type: application/json" \
-            --data "{
+            --data-raw "{
               \"properties\": [
                 {
                   \"field_id\": ${QTEST_SUMMARY_FIELD_ID},
@@ -51,4 +52,17 @@ jobs:
                   \"field_value\": \"${DESCRIPTION}\"
                 }
               ]
-            }"
+            }")
+
+          # Asegúrate de que la primera solicitud fue exitosa antes de continuar
+          if [ -z "$RESPONSE" ]; then
+            echo "Error: La primera solicitud curl no devolvió ninguna respuesta."
+            exit 1
+          fi
+          
+          echo "Respuesta de la primera solicitud: $RESPONSE"
+          
+          # Envía el cuerpo de la respuesta anterior como datos a la segunda solicitud
+          curl --location --request POST '$QTEST_WEBHOOK_DISCORD' \
+            --header 'Content-Type: application/json' \
+            --data "$RESPONSE"
