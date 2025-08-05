@@ -1,0 +1,67 @@
+name: Crear Bug en qTest cuando falla el job
+
+on: [push]
+
+jobs:
+  run-testimio-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v4
+      - run: npm install -g @testim/testim-cli
+      - run: testim --token "onlfP7MDMyaYPkfadfmv8lIbTRTqAdwJrYf4u4Hkyd383N" --project "nKGi7CBJynSVJ3" --grid "Testim-Grid" --suite "FaildTest" --timeout 300000
+
+  create-qtest-defect:
+    # Este job solo se ejecutará después de que "run-testimio-cli" haya terminado.
+    needs: run-testimio-cli
+    # Esta condición crucial asegura que solo se ejecute si el job anterior falla.
+    if: failure()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create qTest Defect
+        id: create_defect_step
+        env:
+          QTEST_TOKEN: ${{ secrets.QTEST_BEARER_TOKEN }}
+          QTEST_URL: 'https://williamdiaz.qtestnet.com'
+          QTEST_PROJECT_ID: '21672'
+          QTEST_SUMMARY_FIELD_ID: '2097336'
+          QTEST_DESCRIPTION_FIELD_ID: '2097339'
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_COMMIT_SHA: ${{ github.sha }}
+          
+        run: |
+          SUMMARY="[Testim] Fallo en el pipeline de ${{ env.GITHUB_REPO }}"
+
+          DESCRIPTION="El pipeline ha fallado en el commit [${{ env.GITHUB_COMMIT_SHA }}](https://github.com/${{ env.GITHUB_REPO }}/commit/${{ env.GITHUB_COMMIT_SHA }}).
+
+          Puedes ver los detalles del fallo aquí: https://github.com/${{ env.GITHUB_REPO }}/actions/runs/${{ env.GITHUB_RUN_ID }}.
+          Por favor, revisa el log de testim para diagnosticar el problema."
+
+          # El JSON de la solicitud a la API, usando los IDs y valores que te funcionaron.
+          DEFECT_PAYLOAD=$(jq -n \
+            --arg summary_id "${{ env.QTEST_SUMMARY_FIELD_ID }}" \
+            --arg description_id "${{ env.QTEST_DESCRIPTION_FIELD_ID }}" \
+            --arg summary_val "${SUMMARY}" \
+            --arg description_val "${DESCRIPTION}" \
+            '{
+              properties: [
+                {
+                  field_id: ($summary_id | tonumber),
+                  field_name: "Summary",
+                  field_value: $summary_val
+                },
+                {
+                  field_id: ($description_id | tonumber),
+                  field_name: "Description",
+                  field_value: $description_val
+                }
+              ]
+            }'
+          )
+
+          curl --location --request POST "${{ env.QTEST_URL }}/api/v3/projects/${{ env.QTEST_PROJECT_ID }}/defects" \
+          --header "Authorization: Bearer ${{ env.QTEST_TOKEN }}" \
+          --header 'Content-Type: application/json' \
+          --data "${DEFECT_PAYLOAD}"
