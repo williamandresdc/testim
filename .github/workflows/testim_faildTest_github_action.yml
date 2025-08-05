@@ -61,20 +61,25 @@ jobs:
           fi
           
           echo "Respuesta de la primera solicitud: $RESPONSE"
+          
           # Establece la respuesta como una salida del paso
-          echo "::set-output name=qtest_response::${RESPONSE}"
+          echo "QTEST_RESPONSE_DATA=$RESPONSE" >> $GITHUB_OUTPUT
+          
+      - name: Instalar jq para parsear JSON
+        run: sudo apt-get update && sudo apt-get install -y jq
           
       - name: Notificar al webhook
         env:
             QTEST_WEBHOOK_DISCORD: ${{ secrets.QTEST_WEBHOOK_DISCORD }}
         # Este paso depende de la salida del paso anterior
         run: |
+          echo "Respuesta del primer paso:"
+          QTEST_RESPONSE_JSON="${{ steps.create_defect_step.outputs.QTEST_RESPONSE_DATA }}"
+                    
           # Accede a la salida del paso 'create_defect_step'
-          WEBHOOK_DATA="${{ steps.create_defect_step.outputs.qtest_response }}"
+          echo "Enviando a webhook: $QTEST_RESPONSE_JSON"
           
-          echo "Enviando a webhook: $WEBHOOK_DATA"
-
           # Envía el cuerpo de la respuesta anterior como datos a la segunda solicitud
           curl --location --request POST "$QTEST_WEBHOOK_DISCORD" \
             --header 'Content-Type: application/json' \
-            --data "$WEBHOOK_DATA"
+            --data '$WEBHOOK_DATA'
