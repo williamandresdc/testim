@@ -22,8 +22,7 @@ jobs:
       - name: Create qTest Defect
         id: create_defect_step
         env:
-          QTEST_TOKEN: ${{ secrets.QTEST_BEARER_TOKEN }}
-          QTEST_URL: 'https://williamdiaz.qtestnet.com'
+          QTEST_TOKEN: ${{ secrets.QTEST_TOKEN }}
           QTEST_PROJECT_ID: '21672'
           QTEST_SUMMARY_FIELD_ID: '2097336'
           QTEST_DESCRIPTION_FIELD_ID: '2097339'
@@ -31,37 +30,25 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_COMMIT_SHA: ${{ github.sha }}
           
-        run: |
-          SUMMARY="[Testim] Fallo en el pipeline de ${{ env.GITHUB_REPO }}"
-
-          DESCRIPTION="El pipeline ha fallado en el commit [${{ env.GITHUB_COMMIT_SHA }}](https://github.com/${{ env.GITHUB_REPO }}/commit/${{ env.GITHUB_COMMIT_SHA }}).
-
-          Puedes ver los detalles del fallo aquí: https://github.com/${{ env.GITHUB_REPO }}/actions/runs/${{ env.GITHUB_RUN_ID }}.
-          Por favor, revisa el log de testim para diagnosticar el problema."
-
-          # El JSON de la solicitud a la API, usando los IDs y valores que te funcionaron.
-          DEFECT_PAYLOAD=$(jq -n \
-            --arg summary_id "${{ env.QTEST_SUMMARY_FIELD_ID }}" \
-            --arg description_id "${{ env.QTEST_DESCRIPTION_FIELD_ID }}" \
-            --arg summary_val "${SUMMARY}" \
-            --arg description_val "${DESCRIPTION}" \
-            '{
-              properties: [
+        run: |  
+          QTEST_URL="https://williamdiaz.qtestnet.com/api/v3/projects/${QTEST_PROJECT_ID}/defects"
+          SUMMARY="Error en pipeline ${GITHUB_RUN_ID}"
+          DESCRIPTION="El commit ${GITHUB_COMMIT_SHA} falló. Revisa: https://github.com/${GITHUB_REPO}/actions/runs/${GITHUB_RUN_ID}"
+      
+          curl --location "$QTEST_URL" \
+            --header "Authorization: $QTEST_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "{
+              \"properties\": [
                 {
-                  field_id: ($summary_id | tonumber),
-                  field_name: "Summary",
-                  field_value: $summary_val
+                  \"field_id\": ${QTEST_SUMMARY_FIELD_ID},
+                  \"field_name\": \"Summary\",
+                  \"field_value\": \"${SUMMARY}\"
                 },
                 {
-                  field_id: ($description_id | tonumber),
-                  field_name: "Description",
-                  field_value: $description_val
+                  \"field_id\": ${QTEST_DESCRIPTION_FIELD_ID},
+                  \"field_name\": \"Description\",
+                  \"field_value\": \"${DESCRIPTION}\"
                 }
               ]
-            }'
-          )
-
-          curl --location --request POST "${{ env.QTEST_URL }}/api/v3/projects/${{ env.QTEST_PROJECT_ID }}/defects" \
-          --header "Authorization: ${{ env.QTEST_TOKEN }}" \
-          --header 'Content-Type: application/json' \
-          --data "${DEFECT_PAYLOAD}"
+            }"
