@@ -65,8 +65,8 @@ jobs:
           # Establece la respuesta como una salida del paso
           echo "QTEST_RESPONSE_DATA=$RESPONSE" >> $GITHUB_OUTPUT
           
-      - name: Instalar jq para parsear JSON
-        run: sudo apt-get update && sudo apt-get install -y jq
+      #- name: Instalar jq para parsear JSON
+      #  run: sudo apt-get update && sudo apt-get install -y jq
           
       - name: Notificar al webhook
         env:
@@ -79,7 +79,7 @@ jobs:
           # Accede a la salida del paso 'create_defect_step'
           echo "Enviando a webhook: $QTEST_RESPONSE_JSON"
           
-          # Envía el cuerpo de la respuesta anterior como datos a la segunda solicitud
-          curl --location --request POST "$QTEST_WEBHOOK_DISCORD" \
+          # Envía el payload a Discord
+          curl -X POST "$QTEST_WEBHOOK_DISCORD" \
             --header 'Content-Type: application/json' \
-            --data '$WEBHOOK_DATA'
+            --data "$QTEST_RESPONSE_JSON"
