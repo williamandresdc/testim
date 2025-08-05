@@ -67,7 +67,7 @@ jobs:
           
       - name: Notificar al webhook
         env:
-            QTEST_WEBHOOK_DISCORD: ${{ secrets.QTEST_WEBHOOK_DISCORD }}
+            QTEST_WEBHOOK: ${{ secrets.QTEST_WEBHOOK_QTEST }}
         # Este paso depende de la salida del paso anterior
         run: |
           echo "Respuesta del primer paso:"
@@ -78,6 +78,6 @@ jobs:
 
           echo "Enviando a webhook: $QTEST_RESPONSE_JSON"
 
-          curl -X POST "$QTEST_WEBHOOK_DISCORD" \
+          curl -X POST "$QTEST_WEBHOOK" \
             --header 'Content-Type: application/json' \
             --data "$QTEST_RESPONSE_JSON"
